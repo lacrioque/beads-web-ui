@@ -4,6 +4,7 @@
 	import { fetchConnectionStatus } from '$lib/services/api';
 	import { websocketService } from '$lib/services/websocket.svelte';
 	import { serverManager } from '$lib/services/servers.svelte';
+	import { Badge } from '$lib/components';
 
 	const navItems = [
 		{ href: '/', label: 'Overview', icon: '📊' },
@@ -74,7 +75,7 @@
 	});
 </script>
 
-<nav class="bg-white shadow-sm border-b border-gray-200">
+<nav class="border-b border-gray-200 bg-white shadow-sm">
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 		<div class="flex h-16 justify-between">
 			<div class="flex">
@@ -104,7 +105,7 @@
 							id="server-dropdown-button"
 							type="button"
 							onclick={toggleServerDropdown}
-							class="flex items-center space-x-2 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+							class="flex items-center space-x-2 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
 							title="Switch server"
 						>
 							<span class="hidden sm:inline">🖥️</span>
@@ -113,29 +114,32 @@
 						</button>
 
 						{#if serverDropdownOpen}
-							<div id="server-dropdown" class="absolute right-0 mt-2 w-64 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+							<div
+								id="server-dropdown"
+								class="ring-opacity-5 absolute right-0 z-50 mt-2 w-64 rounded-md bg-white shadow-lg ring-1 ring-black"
+							>
 								<div class="py-1">
 									{#each allServers as server}
 										<button
 											type="button"
 											onclick={() => handleServerSwitch(server.id)}
-											class="flex w-full items-center justify-between px-4 py-2 text-sm hover:bg-gray-100 transition-colors {server.active ? 'bg-blue-50' : ''}"
+											class="flex w-full items-center justify-between px-4 py-2 text-sm transition-colors hover:bg-gray-100 {server.active
+												? 'bg-blue-50'
+												: ''}"
 										>
 											<div class="flex-1 text-left">
 												<div class="font-medium text-gray-900">{server.name}</div>
-												<div class="text-xs text-gray-500 truncate">{server.url}</div>
+												<div class="truncate text-xs text-gray-500">{server.url}</div>
 											</div>
 											{#if server.active}
-												<span class="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-													Active
-												</span>
+												<Badge class="ml-2 bg-blue-100 text-blue-800">Active</Badge>
 											{/if}
 										</button>
 									{/each}
 									<div class="border-t border-gray-100 pt-1">
 										<a
 											href="/settings"
-											class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+											class="block px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
 											onclick={() => (serverDropdownOpen = false)}
 										>
 											⚙️ Manage Servers
@@ -147,14 +151,24 @@
 					</div>
 
 					<!-- API Connection Status -->
-					<div class="flex items-center space-x-2" title="{apiConnected ? 'Connected to beads daemon' : 'Disconnected from daemon'}">
+					<div
+						class="flex items-center space-x-2"
+						title={apiConnected ? 'Connected to beads daemon' : 'Disconnected from daemon'}
+					>
 						<div class="h-2 w-2 rounded-full {apiConnected ? 'bg-green-500' : 'bg-red-500'}"></div>
-						<span class="text-gray-500 hidden sm:inline">API</span>
+						<span class="hidden text-gray-500 sm:inline">API</span>
 					</div>
 					<!-- WebSocket Connection Status -->
-					<div class="flex items-center space-x-2" title="{websocketService.connected ? 'WebSocket connected' : 'WebSocket disconnected'}">
-						<div class="h-2 w-2 rounded-full {websocketService.connected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}"></div>
-						<span class="text-gray-500 hidden sm:inline">WS</span>
+					<div
+						class="flex items-center space-x-2"
+						title={websocketService.connected ? 'WebSocket connected' : 'WebSocket disconnected'}
+					>
+						<div
+							class="h-2 w-2 rounded-full {websocketService.connected
+								? 'animate-pulse bg-green-500'
+								: 'bg-gray-400'}"
+						></div>
+						<span class="hidden text-gray-500 sm:inline">WS</span>
 					</div>
 				</div>
 			</div>
@@ -163,24 +177,24 @@
 
 	<!-- Mobile menu -->
 	<div class="sm:hidden">
-		<div class="space-y-1 pb-3 pt-2">
+		<div class="space-y-1 pt-2 pb-3">
 			<!-- Mobile Server Selector -->
 			<div class="border-b border-gray-200 px-3 pb-3">
-				<div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Server</div>
+				<div class="mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">Server</div>
 				{#each allServers as server}
 					<button
 						type="button"
 						onclick={() => handleServerSwitch(server.id)}
-						class="flex w-full items-center justify-between px-3 py-2 mb-1 rounded-md text-sm transition-colors {server.active ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}"
+						class="mb-1 flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors {server.active
+							? 'bg-blue-50 text-blue-700'
+							: 'text-gray-700 hover:bg-gray-50'}"
 					>
 						<div class="flex-1 text-left">
 							<div class="font-medium">{server.name}</div>
-							<div class="text-xs opacity-75 truncate">{server.url}</div>
+							<div class="truncate text-xs opacity-75">{server.url}</div>
 						</div>
 						{#if server.active}
-							<span class="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-								Active
-							</span>
+							<Badge class="ml-2 bg-blue-100 text-blue-800">Active</Badge>
 						{/if}
 					</button>
 				{/each}
@@ -189,7 +203,7 @@
 			{#each navItems as item}
 				<a
 					href={item.href}
-					class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium transition-colors
+					class="block border-l-4 py-2 pr-4 pl-3 text-base font-medium transition-colors
 						{isActive(item.href)
 						? 'border-blue-500 bg-blue-50 text-blue-700'
 						: 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'}"

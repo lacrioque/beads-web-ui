@@ -134,7 +134,9 @@ export class BeadsRPCClient extends EventEmitter {
 		this.reconnectAttempts++;
 		const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
 
-		console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+		console.log(
+			`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+		);
 
 		this.reconnectTimer = setTimeout(() => {
 			this.reconnectTimer = null;
@@ -209,7 +211,11 @@ export class BeadsRPCClient extends EventEmitter {
 	/**
 	 * Send a request immediately (assumes no pending request)
 	 */
-	private sendRequest(request: RPCRequest, resolve: (value: unknown) => void, reject: (error: Error) => void): void {
+	private sendRequest(
+		request: RPCRequest,
+		resolve: (value: unknown) => void,
+		reject: (error: Error) => void
+	): void {
 		if (!this.socket || !this.connected) {
 			reject(new Error('Not connected to daemon'));
 			return;
@@ -260,11 +266,13 @@ export class BeadsRPCClient extends EventEmitter {
 		type?: string;
 	}): Promise<Issue[]> {
 		// Convert filters to match beads daemon ListArgs structure
-		const args = filters ? {
-			status: filters.status,
-			priority: filters.priority ? parseInt(filters.priority.substring(1)) : undefined,
-			issue_type: filters.type
-		} : {};
+		const args = filters
+			? {
+					status: filters.status,
+					priority: filters.priority ? parseInt(filters.priority.substring(1)) : undefined,
+					issue_type: filters.type
+				}
+			: {};
 
 		return this.request<Issue[]>('list', args);
 	}

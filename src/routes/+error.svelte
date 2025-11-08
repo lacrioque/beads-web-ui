@@ -54,7 +54,9 @@
 </svelte:head>
 
 <div class="flex min-h-full flex-col bg-white pt-16 pb-12">
-	<main class="mx-auto flex w-full max-w-7xl flex-grow flex-col justify-center px-4 sm:px-6 lg:px-8">
+	<main
+		class="mx-auto flex w-full max-w-7xl flex-grow flex-col justify-center px-4 sm:px-6 lg:px-8"
+	>
 		<div class="flex flex-shrink-0 justify-center">
 			<a href="/" class="inline-flex">
 				<span class="text-2xl font-bold text-blue-600">Beads Monitor</span>
@@ -97,10 +99,7 @@
 					>
 						Go back home
 					</a>
-					<button
-						onclick={() => window.history.back()}
-						class="text-sm font-semibold text-gray-900"
-					>
+					<button onclick={() => window.history.back()} class="text-sm font-semibold text-gray-900">
 						Go back <span aria-hidden="true">&rarr;</span>
 					</button>
 				</div>
@@ -109,9 +108,7 @@
 	</main>
 	<footer class="mx-auto w-full max-w-7xl flex-shrink-0 px-4 sm:px-6 lg:px-8">
 		<nav class="flex justify-center space-x-4">
-			<a href="/" class="text-sm font-medium text-gray-500 hover:text-gray-600">
-				Overview
-			</a>
+			<a href="/" class="text-sm font-medium text-gray-500 hover:text-gray-600"> Overview </a>
 			<span class="inline-block border-l border-gray-300" aria-hidden="true"></span>
 			<a href="/statistics" class="text-sm font-medium text-gray-500 hover:text-gray-600">
 				Statistics

@@ -9,6 +9,7 @@ This is a beads monitoring web application built with SvelteKit, providing a rea
 ## Development Commands
 
 ### Running the Development Server
+
 ```bash
 bun dev
 # or with browser open
@@ -16,22 +17,26 @@ bun dev -- --open
 ```
 
 ### Building
+
 ```bash
 bun build        # Creates production build
 bun preview      # Preview production build
 ```
 
 ### Testing
+
 ```bash
 bun test         # Run all tests once
 bun test:unit    # Run tests in watch mode
 ```
 
 The test setup uses Vitest with two separate projects:
+
 - **Client tests**: Files matching `src/**/*.svelte.{test,spec}.{js,ts}` run in Playwright browser environment
 - **Server tests**: Files matching `src/**/*.{test,spec}.{js,ts}` (excluding `.svelte.` files) run in Node environment
 
 ### Code Quality
+
 ```bash
 bun lint         # Run prettier check and ESLint
 bun format       # Format code with prettier
@@ -42,11 +47,13 @@ bun check:watch  # Type-check in watch mode
 ## Architecture
 
 ### SvelteKit Configuration
+
 - **Adapter**: Uses `@sveltejs/adapter-node` for Node.js deployment
 - **Preprocessor**: `vitePreprocess` for TypeScript and other transformations
 - **Build Tool**: Vite with Tailwind CSS 4 plugin
 
 ### Project Structure
+
 - `src/routes/`: SvelteKit routes (file-based routing)
 - `src/lib/`: Reusable components and utilities (aliased as `$lib`)
 - `src/app.css`: Global styles with Tailwind CSS
@@ -54,6 +61,7 @@ bun check:watch  # Type-check in watch mode
 - `docs/`: Project documentation (see docs/00-General.md and docs/01-WebUI-README.md)
 
 ### Key Technologies
+
 - **Svelte 5**: Modern reactivity with runes (`$props()`, `$state()`, etc.)
 - **Tailwind CSS 4**: Latest version with Vite plugin
 - **TypeScript**: Strict mode enabled
@@ -63,10 +71,12 @@ bun check:watch  # Type-check in watch mode
 ## Testing Strategy
 
 ### File Naming Conventions
+
 - **Svelte component tests**: `*.svelte.spec.ts` or `*.svelte.test.ts` (runs in browser)
 - **Server/utility tests**: `*.spec.ts` or `*.test.ts` (runs in Node)
 
 ### Running Specific Tests
+
 ```bash
 # Run a specific test file
 bun test src/demo.spec.ts
@@ -82,11 +92,13 @@ bun test --project=server
 ```
 
 ### Test Assertions
+
 All tests must include assertions (`expect.requireAssertions: true` in config).
 
 ## Integration with Beads Daemon
 
 The application is designed to connect to a beads daemon for issue tracking:
+
 - Connects via RPC to Unix socket
 - Polls for mutation events and broadcasts via WebSocket
 - Provides real-time updates to connected clients

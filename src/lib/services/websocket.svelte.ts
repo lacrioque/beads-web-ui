@@ -138,7 +138,9 @@ class WebSocketService {
 		this.reconnectAttempts++;
 		const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
 
-		console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+		console.log(
+			`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+		);
 
 		this.reconnectTimer = window.setTimeout(() => {
 			this.reconnectTimer = null;

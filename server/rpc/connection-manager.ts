@@ -38,7 +38,7 @@ export async function initializeRPCClient(config: ServerConfig): Promise<BeadsRP
 		console.error('Failed to connect to beads daemon:', error);
 		throw new Error(
 			`Could not connect to beads daemon at ${config.beadsDaemonSocket}. ` +
-			'Make sure the daemon is running with: bd daemon'
+				'Make sure the daemon is running with: bd daemon'
 		);
 	}
 }
