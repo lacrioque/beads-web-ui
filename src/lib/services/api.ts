@@ -2,6 +2,8 @@
  * API service for fetching beads data
  */
 
+import { serverManager } from './servers.svelte';
+
 export interface Issue {
 	id: string;
 	title: string;
@@ -26,7 +28,13 @@ export interface IssueStats {
 	by_type: Record<string, number>;
 }
 
-const API_BASE = '/api';
+/**
+ * Get the API base URL from the active server
+ */
+function getApiBase(): string {
+	const serverUrl = serverManager.getActiveServerUrl();
+	return `${serverUrl}/api`;
+}
 
 /**
  * Fetch all issues with optional filters
@@ -42,7 +50,7 @@ export async function fetchIssues(filters?: {
 	if (filters?.type) params.set('type', filters.type);
 
 	const query = params.toString();
-	const url = `${API_BASE}/issues${query ? `?${query}` : ''}`;
+	const url = `${getApiBase()}/issues${query ? `?${query}` : ''}`;
 
 	const response = await fetch(url);
 	if (!response.ok) {
@@ -57,7 +65,7 @@ export async function fetchIssues(filters?: {
  * Fetch a single issue by ID
  */
 export async function fetchIssue(id: string): Promise<Issue> {
-	const response = await fetch(`${API_BASE}/issues/${id}`);
+	const response = await fetch(`${getApiBase()}/issues/${id}`);
 	if (!response.ok) {
 		if (response.status === 404) {
 			throw new Error(`Issue ${id} not found`);
@@ -73,7 +81,7 @@ export async function fetchIssue(id: string): Promise<Issue> {
  * Fetch issue statistics
  */
 export async function fetchStats(): Promise<IssueStats> {
-	const response = await fetch(`${API_BASE}/stats`);
+	const response = await fetch(`${getApiBase()}/stats`);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch stats: ${response.statusText}`);
 	}
@@ -86,7 +94,7 @@ export async function fetchStats(): Promise<IssueStats> {
  * Fetch ready work (issues with no blockers)
  */
 export async function fetchReady(): Promise<Issue[]> {
-	const response = await fetch(`${API_BASE}/ready`);
+	const response = await fetch(`${getApiBase()}/ready`);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch ready issues: ${response.statusText}`);
 	}
@@ -99,7 +107,7 @@ export async function fetchReady(): Promise<Issue[]> {
  * Check RPC connection status
  */
 export async function fetchConnectionStatus(): Promise<{ connected: boolean; status: string }> {
-	const response = await fetch(`${API_BASE}/status`);
+	const response = await fetch(`${getApiBase()}/status`);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch connection status: ${response.statusText}`);
 	}

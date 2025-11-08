@@ -3,6 +3,8 @@
  * Handles environment variables and configuration for the Koa server
  */
 
+import path from 'path';
+
 export interface ServerConfig {
 	port: number;
 	host: string;
@@ -15,10 +17,13 @@ export interface ServerConfig {
  * Load configuration from environment variables with sensible defaults
  */
 export function loadConfig(): ServerConfig {
+	// Default socket path is .beads/bd.sock in the current working directory
+	const defaultSocketPath = path.join(process.cwd(), '.beads', 'bd.sock');
+
 	return {
 		port: parseInt(process.env.PORT || '3000', 10),
 		host: process.env.HOST || '0.0.0.0',
-		beadsDaemonSocket: process.env.BEADS_DAEMON_SOCKET || '/tmp/beads-daemon.sock',
+		beadsDaemonSocket: process.env.BEADS_DAEMON_SOCKET || defaultSocketPath,
 		nodeEnv: process.env.NODE_ENV || 'development',
 		staticPath: process.env.STATIC_PATH || 'build/client'
 	};

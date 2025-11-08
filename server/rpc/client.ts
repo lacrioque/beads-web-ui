@@ -7,18 +7,15 @@ import net from 'net';
 import { EventEmitter } from 'events';
 
 export interface RPCRequest {
-	method: string;
-	params?: unknown;
-	id?: string | number;
+	operation: string;
+	args?: unknown;
+	request_id?: string | number;
 }
 
 export interface RPCResponse<T = unknown> {
-	result?: T;
-	error?: {
-		code: number;
-		message: string;
-	};
-	id?: string | number;
+	success: boolean;
+	data?: T;
+	error?: string;
 }
 
 export interface Issue {
@@ -58,16 +55,22 @@ export interface MutationEvent {
 export class BeadsRPCClient extends EventEmitter {
 	private socket: net.Socket | null = null;
 	private socketPath: string;
-	private requestId = 0;
-	private pendingRequests = new Map<string | number, {
+	private pendingRequest: {
 		resolve: (value: unknown) => void;
 		reject: (error: Error) => void;
-	}>();
+		timeout: NodeJS.Timeout;
+	} | null = null;
+	private requestQueue: Array<{
+		request: RPCRequest;
+		resolve: (value: unknown) => void;
+		reject: (error: Error) => void;
+	}> = [];
 	private buffer = '';
 	private connected = false;
 	private reconnectTimer: NodeJS.Timeout | null = null;
 	private reconnectAttempts = 0;
 	private maxReconnectAttempts = 5;
+	private processing = false;
 
 	constructor(socketPath: string) {
 		super();
@@ -167,42 +170,84 @@ export class BeadsRPCClient extends EventEmitter {
 	 * Handle RPC response
 	 */
 	private handleResponse(response: RPCResponse): void {
-		const pending = this.pendingRequests.get(response.id!);
-		if (pending) {
-			this.pendingRequests.delete(response.id!);
-
-			if (response.error) {
-				pending.reject(new Error(response.error.message));
-			} else {
-				pending.resolve(response.result);
-			}
+		if (!this.pendingRequest) {
+			console.warn('Received response but no pending request');
+			return;
 		}
+
+		const { resolve, reject, timeout } = this.pendingRequest;
+		clearTimeout(timeout);
+		this.pendingRequest = null;
+
+		if (response.error) {
+			reject(new Error(response.error));
+		} else if (response.success) {
+			resolve(response.data);
+		} else {
+			reject(new Error('Request failed with no error message'));
+		}
+
+		// Process next request in queue
+		this.processQueue();
 	}
 
 	/**
-	 * Send RPC request
+	 * Process the next request in the queue
 	 */
-	private async request<T = unknown>(method: string, params?: unknown): Promise<T> {
+	private processQueue(): void {
+		if (this.processing || this.pendingRequest || this.requestQueue.length === 0) {
+			return;
+		}
+
+		this.processing = true;
+		const next = this.requestQueue.shift()!;
+		this.processing = false;
+
+		this.sendRequest(next.request, next.resolve, next.reject);
+	}
+
+	/**
+	 * Send a request immediately (assumes no pending request)
+	 */
+	private sendRequest(request: RPCRequest, resolve: (value: unknown) => void, reject: (error: Error) => void): void {
+		if (!this.socket || !this.connected) {
+			reject(new Error('Not connected to daemon'));
+			return;
+		}
+
+		// Send request as newline-delimited JSON
+		this.socket.write(JSON.stringify(request) + '\n');
+
+		// Set up timeout
+		const timeout = setTimeout(() => {
+			if (this.pendingRequest) {
+				this.pendingRequest = null;
+				reject(new Error('Request timeout'));
+				this.processQueue();
+			}
+		}, 30000);
+
+		this.pendingRequest = { resolve: resolve as (value: unknown) => void, reject, timeout };
+	}
+
+	/**
+	 * Send RPC request (queued)
+	 */
+	private async request<T = unknown>(operation: string, args?: unknown): Promise<T> {
 		if (!this.socket || !this.connected) {
 			throw new Error('Not connected to daemon');
 		}
 
-		const id = ++this.requestId;
-		const request: RPCRequest = { method, params, id };
+		const request: RPCRequest = { operation, args };
 
 		return new Promise((resolve, reject) => {
-			this.pendingRequests.set(id, { resolve: resolve as (value: unknown) => void, reject });
-
-			// Send request as newline-delimited JSON
-			this.socket!.write(JSON.stringify(request) + '\n');
-
-			// Timeout after 30 seconds
-			setTimeout(() => {
-				if (this.pendingRequests.has(id)) {
-					this.pendingRequests.delete(id);
-					reject(new Error('Request timeout'));
-				}
-			}, 30000);
+			// If no pending request, send immediately
+			if (!this.pendingRequest) {
+				this.sendRequest(request, resolve, reject);
+			} else {
+				// Otherwise, queue it
+				this.requestQueue.push({ request, resolve: resolve as (value: unknown) => void, reject });
+			}
 		});
 	}
 
@@ -214,7 +259,14 @@ export class BeadsRPCClient extends EventEmitter {
 		priority?: string;
 		type?: string;
 	}): Promise<Issue[]> {
-		return this.request<Issue[]>('list', filters);
+		// Convert filters to match beads daemon ListArgs structure
+		const args = filters ? {
+			status: filters.status,
+			priority: filters.priority ? parseInt(filters.priority.substring(1)) : undefined,
+			issue_type: filters.type
+		} : {};
+
+		return this.request<Issue[]>('list', args);
 	}
 
 	/**
@@ -228,21 +280,21 @@ export class BeadsRPCClient extends EventEmitter {
 	 * Get issue statistics
 	 */
 	async getStats(): Promise<IssueStats> {
-		return this.request<IssueStats>('stats');
+		return this.request<IssueStats>('stats', {});
 	}
 
 	/**
 	 * Get ready work (no blockers)
 	 */
 	async getReady(): Promise<Issue[]> {
-		return this.request<Issue[]>('ready');
+		return this.request<Issue[]>('ready', {});
 	}
 
 	/**
-	 * Get mutation events since a specific event ID
+	 * Get mutation events since a specific timestamp
 	 */
-	async getMutations(sinceId: number = 0): Promise<MutationEvent[]> {
-		return this.request<MutationEvent[]>('mutations', { since: sinceId });
+	async getMutations(sinceTimestamp: number = 0): Promise<MutationEvent[]> {
+		return this.request<MutationEvent[]>('get_mutations', { since: sinceTimestamp });
 	}
 
 	/**
@@ -259,8 +311,20 @@ export class BeadsRPCClient extends EventEmitter {
 			this.socket = null;
 		}
 
+		// Clear pending request and queue
+		if (this.pendingRequest) {
+			clearTimeout(this.pendingRequest.timeout);
+			this.pendingRequest.reject(new Error('Client disconnected'));
+			this.pendingRequest = null;
+		}
+
+		// Clear request queue
+		for (const queued of this.requestQueue) {
+			queued.reject(new Error('Client disconnected'));
+		}
+		this.requestQueue = [];
+
 		this.connected = false;
-		this.pendingRequests.clear();
 	}
 
 	/**

@@ -11,6 +11,7 @@ import { loadConfig, validateConfig } from './config.js';
 import type { ServerConfig } from './config.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { logger } from './middleware/logger.js';
+import { cors } from './middleware/cors.js';
 import { initializeRPCClient, closeRPCClient } from './rpc/connection-manager.js';
 import apiRouter from './routes/api.js';
 import { BeadsWebSocketServer } from './websocket/server.js';
@@ -34,6 +35,7 @@ export function createApp(config: ServerConfig): Koa {
 
 	// Apply middleware (order matters!)
 	app.use(errorHandler); // Error handler should be first
+	app.use(cors()); // CORS should be early to handle preflight requests
 	app.use(logger()); // Logger should be early
 	app.use(bodyParser());
 

@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { fetchConnectionStatus } from '$lib/services/api';
 	import { websocketService } from '$lib/services/websocket.svelte';
+	import { serverManager } from '$lib/services/servers.svelte';
 
 	const navItems = [
 		{ href: '/', label: 'Overview', icon: '📊' },
@@ -11,12 +12,30 @@
 	];
 
 	let apiConnected = $state(false);
+	let serverDropdownOpen = $state(false);
+
+	let activeServer = $derived(serverManager.getActiveServer());
+	let allServers = $derived(serverManager.getAllServers());
 
 	function isActive(href: string): boolean {
 		if (href === '/') {
 			return $page.url.pathname === '/';
 		}
 		return $page.url.pathname.startsWith(href);
+	}
+
+	function handleServerSwitch(serverId: string) {
+		if (serverId !== serverManager.activeServerId) {
+			serverManager.setActiveServer(serverId);
+			websocketService.reconnect();
+			// Recheck API connection with new server
+			checkApiConnection();
+		}
+		serverDropdownOpen = false;
+	}
+
+	function toggleServerDropdown() {
+		serverDropdownOpen = !serverDropdownOpen;
 	}
 
 	async function checkApiConnection() {
@@ -28,11 +47,30 @@
 		}
 	}
 
+	// Close dropdown when clicking outside
+	function handleClickOutside(event: MouseEvent) {
+		if (serverDropdownOpen) {
+			const target = event.target as HTMLElement;
+			const dropdown = document.getElementById('server-dropdown');
+			const button = document.getElementById('server-dropdown-button');
+			if (dropdown && button && !dropdown.contains(target) && !button.contains(target)) {
+				serverDropdownOpen = false;
+			}
+		}
+	}
+
 	onMount(() => {
 		checkApiConnection();
 		// Check API connection every 30 seconds
 		const interval = setInterval(checkApiConnection, 30000);
-		return () => clearInterval(interval);
+
+		// Add click outside listener
+		document.addEventListener('click', handleClickOutside);
+
+		return () => {
+			clearInterval(interval);
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 </script>
 
@@ -60,6 +98,54 @@
 			</div>
 			<div class="flex items-center">
 				<div class="flex items-center space-x-4 text-sm">
+					<!-- Server Switcher Dropdown -->
+					<div class="relative">
+						<button
+							id="server-dropdown-button"
+							type="button"
+							onclick={toggleServerDropdown}
+							class="flex items-center space-x-2 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+							title="Switch server"
+						>
+							<span class="hidden sm:inline">🖥️</span>
+							<span class="max-w-32 truncate">{activeServer?.name || 'No Server'}</span>
+							<span class="text-gray-400">▼</span>
+						</button>
+
+						{#if serverDropdownOpen}
+							<div id="server-dropdown" class="absolute right-0 mt-2 w-64 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+								<div class="py-1">
+									{#each allServers as server}
+										<button
+											type="button"
+											onclick={() => handleServerSwitch(server.id)}
+											class="flex w-full items-center justify-between px-4 py-2 text-sm hover:bg-gray-100 transition-colors {server.active ? 'bg-blue-50' : ''}"
+										>
+											<div class="flex-1 text-left">
+												<div class="font-medium text-gray-900">{server.name}</div>
+												<div class="text-xs text-gray-500 truncate">{server.url}</div>
+											</div>
+											{#if server.active}
+												<span class="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+													Active
+												</span>
+											{/if}
+										</button>
+									{/each}
+									<div class="border-t border-gray-100 pt-1">
+										<a
+											href="/settings"
+											class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+											onclick={() => (serverDropdownOpen = false)}
+										>
+											⚙️ Manage Servers
+										</a>
+									</div>
+								</div>
+							</div>
+						{/if}
+					</div>
+
 					<!-- API Connection Status -->
 					<div class="flex items-center space-x-2" title="{apiConnected ? 'Connected to beads daemon' : 'Disconnected from daemon'}">
 						<div class="h-2 w-2 rounded-full {apiConnected ? 'bg-green-500' : 'bg-red-500'}"></div>
@@ -78,6 +164,28 @@
 	<!-- Mobile menu -->
 	<div class="sm:hidden">
 		<div class="space-y-1 pb-3 pt-2">
+			<!-- Mobile Server Selector -->
+			<div class="border-b border-gray-200 px-3 pb-3">
+				<div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Server</div>
+				{#each allServers as server}
+					<button
+						type="button"
+						onclick={() => handleServerSwitch(server.id)}
+						class="flex w-full items-center justify-between px-3 py-2 mb-1 rounded-md text-sm transition-colors {server.active ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}"
+					>
+						<div class="flex-1 text-left">
+							<div class="font-medium">{server.name}</div>
+							<div class="text-xs opacity-75 truncate">{server.url}</div>
+						</div>
+						{#if server.active}
+							<span class="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+								Active
+							</span>
+						{/if}
+					</button>
+				{/each}
+			</div>
+
 			{#each navItems as item}
 				<a
 					href={item.href}

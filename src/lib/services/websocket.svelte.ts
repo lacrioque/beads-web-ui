@@ -3,6 +3,8 @@
  * Uses Svelte 5 runes for reactivity
  */
 
+import { serverManager } from './servers.svelte';
+
 export interface WebSocketMessage {
 	type: 'mutation' | 'stats' | 'issues' | 'ping' | 'pong' | 'error';
 	data?: unknown;
@@ -27,6 +29,16 @@ class WebSocketService {
 	mutations = $state<MutationEvent[]>([]);
 
 	/**
+	 * Get WebSocket URL from configured server
+	 */
+	private getWebSocketUrl(): string {
+		const serverUrl = serverManager.getActiveServerUrl();
+		// Convert http:// or https:// to ws:// or wss://
+		const wsUrl = serverUrl.replace(/^http/, 'ws');
+		return `${wsUrl}/ws`;
+	}
+
+	/**
 	 * Connect to WebSocket server
 	 */
 	connect(): void {
@@ -35,9 +47,7 @@ class WebSocketService {
 			return;
 		}
 
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-		const wsUrl = `${protocol}//${window.location.host}/ws`;
-
+		const wsUrl = this.getWebSocketUrl();
 		console.log(`Connecting to WebSocket: ${wsUrl}`);
 
 		try {
@@ -158,6 +168,16 @@ class WebSocketService {
 	 */
 	clearMutations(): void {
 		this.mutations = [];
+	}
+
+	/**
+	 * Reconnect to WebSocket (used when server changes)
+	 */
+	reconnect(): void {
+		console.log('Reconnecting to new server...');
+		this.disconnect();
+		this.reconnectAttempts = 0;
+		this.connect();
 	}
 }
 

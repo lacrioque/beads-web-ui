@@ -16,7 +16,7 @@ export interface MutationPollerOptions {
  */
 export class MutationPoller extends EventEmitter {
 	private pollInterval: NodeJS.Timeout | null = null;
-	private lastEventId = 0;
+	private lastTimestamp = 0; // Unix timestamp in milliseconds
 	private isPolling = false;
 	private options: MutationPollerOptions;
 
@@ -58,16 +58,14 @@ export class MutationPoller extends EventEmitter {
 				return;
 			}
 
-			const mutations = await client.getMutations(this.lastEventId);
+			const mutations = await client.getMutations(this.lastTimestamp);
 
-			if (mutations.length > 0) {
+			// Handle null response (no mutations) - daemon returns null instead of empty array
+			if (mutations && mutations.length > 0) {
 				console.log(`Found ${mutations.length} new mutation(s)`);
 
-				// Update last event ID
-				const maxId = Math.max(...mutations.map((m) => m.id));
-				if (maxId > this.lastEventId) {
-					this.lastEventId = maxId;
-				}
+				// Update last timestamp - use current time
+				this.lastTimestamp = Date.now();
 
 				// Emit mutations event
 				this.emit('mutations', mutations);
@@ -104,16 +102,16 @@ export class MutationPoller extends EventEmitter {
 	}
 
 	/**
-	 * Get last event ID
+	 * Get last timestamp
 	 */
-	getLastEventId(): number {
-		return this.lastEventId;
+	getLastTimestamp(): number {
+		return this.lastTimestamp;
 	}
 
 	/**
-	 * Reset last event ID (useful for testing)
+	 * Reset last timestamp (useful for testing)
 	 */
 	reset(): void {
-		this.lastEventId = 0;
+		this.lastTimestamp = 0;
 	}
 }
