@@ -11,6 +11,7 @@ export interface ServerConfig {
 	beadsDaemonSocket: string;
 	nodeEnv: string;
 	staticPath: string;
+	buildPath: string;
 }
 
 /**
@@ -25,7 +26,8 @@ export function loadConfig(): ServerConfig {
 		host: process.env.HOST || '0.0.0.0',
 		beadsDaemonSocket: process.env.BEADS_DAEMON_SOCKET || defaultSocketPath,
 		nodeEnv: process.env.NODE_ENV || 'development',
-		staticPath: process.env.STATIC_PATH || 'build/client'
+		staticPath: process.env.STATIC_PATH || 'build/client',
+		buildPath: process.env.BUILD_PATH || 'build'
 	};
 }
 

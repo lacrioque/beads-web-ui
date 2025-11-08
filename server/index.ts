@@ -12,6 +12,7 @@ import type { ServerConfig } from './config.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { logger } from './middleware/logger.js';
 import { cors } from './middleware/cors.js';
+import { createSvelteKitMiddleware } from './middleware/sveltekit.js';
 import { initializeRPCClient, closeRPCClient } from './rpc/connection-manager.js';
 import apiRouter from './routes/api.js';
 import { BeadsWebSocketServer } from './websocket/server.js';
@@ -20,7 +21,7 @@ import { MutationPoller } from './websocket/mutation-poller.js';
 /**
  * Create and configure the Koa application
  */
-export function createApp(config: ServerConfig): Koa {
+export async function createApp(config: ServerConfig): Promise<Koa> {
 	const app = new Koa();
 	const router = new Router();
 
@@ -45,10 +46,15 @@ export function createApp(config: ServerConfig): Koa {
 	app.use(apiRouter.routes());
 	app.use(apiRouter.allowedMethods());
 
-	// Serve static files (SvelteKit client build) - should be last
+	// Serve static files (SvelteKit client build)
 	if (config.staticPath) {
 		app.use(serve(config.staticPath));
 	}
+
+	// SvelteKit handler (SSR + routing) - should be last
+	// This handles all unmatched routes with SvelteKit
+	const svelteKitMiddleware = await createSvelteKitMiddleware(config.buildPath);
+	app.use(svelteKitMiddleware);
 
 	return app;
 }
@@ -77,7 +83,7 @@ export async function startServer(): Promise<void> {
 		console.warn('Start the daemon with: bd daemon');
 	}
 
-	const app = createApp(config);
+	const app = await createApp(config);
 
 	const server = app.listen(config.port, config.host, () => {
 		console.log(`🚀 Server running at http://${config.host}:${config.port}`);
