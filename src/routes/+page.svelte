@@ -3,7 +3,15 @@
 	import { goto } from '$app/navigation';
 	import { fetchIssues, fetchStats } from '$lib/services/api';
 	import { websocketService } from '$lib/services/websocket.svelte';
-	import { IssueCard, StatCard, LoadingSkeleton, Input, Card, CardContent } from '$lib/components';
+	import {
+		IssueCard,
+		EpicCard,
+		StatCard,
+		LoadingSkeleton,
+		Input,
+		Card,
+		CardContent
+	} from '$lib/components';
 	import type { Issue, IssueStats } from '$lib/services/api';
 
 	let issues = $state<Issue[]>([]);
@@ -14,15 +22,19 @@
 	// Filter state
 	let statusFilter = $state('');
 	let priorityFilter = $state('');
+	let typeFilter = $state('');
+	let parentFilter = $state('');
 	let searchQuery = $state('');
 
 	async function loadData() {
 		try {
 			loading = true;
 			error = null;
-			const filters: { status?: string; priority?: string } = {};
+			const filters: { status?: string; priority?: string; type?: string; parent?: string } = {};
 			if (statusFilter) filters.status = statusFilter;
 			if (priorityFilter) filters.priority = priorityFilter;
+			if (typeFilter) filters.type = typeFilter;
+			if (parentFilter) filters.parent = parentFilter;
 
 			const [fetchedIssues, fetchedStats] = await Promise.all([fetchIssues(filters), fetchStats()]);
 
@@ -35,6 +47,9 @@
 			loading = false;
 		}
 	}
+
+	// Get list of epics for parent filter
+	let availableEpics = $derived(issues.filter((issue) => issue.issue_type === 'epic'));
 
 	onMount(() => {
 		loadData();
@@ -55,7 +70,7 @@
 		});
 	});
 
-	// Filter issues by search query
+	// Filter issues by search query and separate epics from regular issues
 	let filteredIssues = $derived(
 		issues.filter((issue) => {
 			if (!searchQuery) return true;
@@ -63,6 +78,9 @@
 			return issue.id.toLowerCase().includes(query) || issue.title.toLowerCase().includes(query);
 		})
 	);
+
+	let epics = $derived(filteredIssues.filter((issue) => issue.issue_type === 'epic'));
+	let regularIssues = $derived(filteredIssues.filter((issue) => issue.issue_type !== 'epic'));
 
 	async function applyFilters() {
 		await loadData();
@@ -120,7 +138,7 @@
 	<!-- Filters -->
 	<Card>
 		<CardContent class="pt-6">
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				<div>
 					<label for="status" class="mb-2 block text-sm font-medium text-gray-700">Status</label>
 					<select
@@ -153,6 +171,38 @@
 				</div>
 
 				<div>
+					<label for="type" class="mb-2 block text-sm font-medium text-gray-700">Type</label>
+					<select
+						id="type"
+						bind:value={typeFilter}
+						onchange={applyFilters}
+						class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+					>
+						<option value="">All</option>
+						<option value="epic">Epic</option>
+						<option value="task">Task</option>
+						<option value="bug">Bug</option>
+					</select>
+				</div>
+
+				<div>
+					<label for="parent" class="mb-2 block text-sm font-medium text-gray-700"
+						>Parent Epic</label
+					>
+					<select
+						id="parent"
+						bind:value={parentFilter}
+						onchange={applyFilters}
+						class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+					>
+						<option value="">All (no parent filter)</option>
+						{#each availableEpics as epic (epic.id)}
+							<option value={epic.id}>{epic.id} - {epic.title}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="sm:col-span-2 lg:col-span-2">
 					<label for="search" class="mb-2 block text-sm font-medium text-gray-700">Search</label>
 					<Input type="text" id="search" bind:value={searchQuery} placeholder="Search issues..." />
 				</div>
@@ -190,10 +240,32 @@
 			</CardContent>
 		</Card>
 	{:else}
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each filteredIssues as issue (issue.id)}
-				<IssueCard {issue} onclick={() => navigateToIssue(issue.id)} />
-			{/each}
+		<div class="space-y-6">
+			<!-- Epics section -->
+			{#if epics.length > 0}
+				<div class="space-y-3">
+					<h2 class="text-lg font-semibold text-gray-900">Epics</h2>
+					<div class="grid grid-cols-1 gap-4">
+						{#each epics as epic (epic.id)}
+							<EpicCard {epic} />
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- Regular issues section -->
+			{#if regularIssues.length > 0}
+				<div class="space-y-3">
+					{#if epics.length > 0}
+						<h2 class="text-lg font-semibold text-gray-900">Issues</h2>
+					{/if}
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{#each regularIssues as issue (issue.id)}
+							<IssueCard {issue} onclick={() => navigateToIssue(issue.id)} />
+						{/each}
+					</div>
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

@@ -10,6 +10,7 @@ export interface Issue {
 	status: 'open' | 'in_progress' | 'closed';
 	priority: 'P1' | 'P2' | 'P3';
 	type?: string;
+	issue_type?: string;
 	assignee?: string;
 	created: string;
 	updated: string;
@@ -43,11 +44,13 @@ export async function fetchIssues(filters?: {
 	status?: string;
 	priority?: string;
 	type?: string;
+	parent?: string;
 }): Promise<Issue[]> {
 	const params = new URLSearchParams();
 	if (filters?.status) params.set('status', filters.status);
 	if (filters?.priority) params.set('priority', filters.priority);
 	if (filters?.type) params.set('type', filters.type);
+	if (filters?.parent) params.set('parent', filters.parent);
 
 	const query = params.toString();
 	const url = `${getApiBase()}/issues${query ? `?${query}` : ''}`;
@@ -110,6 +113,32 @@ export async function fetchConnectionStatus(): Promise<{ connected: boolean; sta
 	const response = await fetch(`${getApiBase()}/status`);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch connection status: ${response.statusText}`);
+	}
+
+	return response.json();
+}
+
+export interface EpicDetails {
+	epic: Issue;
+	children: Issue[];
+	stats: {
+		total: number;
+		open: number;
+		in_progress: number;
+		closed: number;
+	};
+}
+
+/**
+ * Fetch epic details with children and stats
+ */
+export async function fetchEpic(id: string): Promise<EpicDetails> {
+	const response = await fetch(`${getApiBase()}/epics/${id}`);
+	if (!response.ok) {
+		if (response.status === 404) {
+			throw new Error(`Epic ${id} not found`);
+		}
+		throw new Error(`Failed to fetch epic: ${response.statusText}`);
 	}
 
 	return response.json();

@@ -1,5 +1,6 @@
 // Reusable UI Components
 export { default as IssueCard } from './IssueCard.svelte';
+export { default as EpicCard } from './EpicCard.svelte';
 export { default as StatusBadge } from './StatusBadge.svelte';
 export { default as PriorityBadge } from './PriorityBadge.svelte';
 export { default as StatCard } from './StatCard.svelte';
